@@ -4,12 +4,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IPT電話</title>
 <style>
-  body { margin: 0; font-family: sans-serif; background: #ffffff; }
+  body { margin: 0; font-family: sans-serif; background: #ffffff; overflow-x: hidden; }
   .heisei-table { border: 2px solid #000; background: #ccc; }
-  .dial-input { width: 70px; height: 50px; font-size: 20px; cursor: pointer; }
+  .dial-input { width: 75px; height: 55px; font-size: 22px; cursor: pointer; transition: 0.1s; border: 2px solid #888; }
   
-  /* 現在選んでいる数字をPCで分かりやすくする */
-  .active-num { background: #ffff00 !important; border: 2px solid red; }
+  /* ホイールで選択中のボタンを強調 */
+  .active-num { background: #ffff00 !important; border: 3px solid #ff0000 !important; transform: scale(1.05); }
 
   /* 通話中画面（iPhoneスタイル） */
   #callPage { 
@@ -29,19 +29,19 @@
   .end-btn-red:after { content: "終了"; color: white; font-weight: bold; }
 </style>
 </head>
-<body onwheel="handleWheel(event)">
+<body onwheel="handleWheel(event)" onmousedown="handleMiddleClick(event)">
 
 <div id="dialPage">
   <center>
-    <br><font size="5"><b>IPT 電話（ホイール操作対応）</b></font><br>
-    <font size="2" color="gray">PC：ホイールで数字選択 / スマホ：タップ</font><br><br>
+    <br><font size="5"><b>IPT 電話（ホイール入力対応）</b></font><br>
+    <font size="2" color="gray">PC：ホイールで選択 / ホイールクリックで確定</font><br><br>
     
     <table border="1" width="280" cellpadding="10" bgcolor="#F0F0F0">
-      <tr><td align="right"><font size="6" id="display">&nbsp;</font></td></tr>
+      <tr><td align="right" height="60"><font size="6" id="display">&nbsp;</font></td></tr>
     </table>
     
     <br>
-    <table class="heisei-table" border="1" cellpadding="5">
+    <table class="heisei-table" border="1" cellpadding="5" id="keypadTable">
       <tr>
         <td><input type="button" value="1" id="btn1" class="dial-input" onclick="add('1')"></td>
         <td><input type="button" value="2" id="btn2" class="dial-input" onclick="add('2')"></td>
@@ -64,7 +64,9 @@
       </tr>
     </table>
     <br>
-    <input type="button" value="電話をかける" onclick="startCall()" style="width:250px; height:60px; font-size:22px;">
+    <input type="button" value="電話をかける" onclick="startCall()" style="width:250px; height:60px; font-size:22px; cursor:pointer; background:#ccffcc; font-weight:bold;">
+    <br><br>
+    <input type="button" value="消去" onclick="cls()" style="width:80px; height:30px; cursor:pointer;">
   </center>
 </div>
 
@@ -74,6 +76,7 @@
   <center>
     <div style="width: 300px; margin-top: 50px;">
       <button class="circle-btn">消音</button><button class="circle-btn">キーパッド</button><button class="circle-btn">スピーカー</button>
+      <button class="circle-btn">通話追加</button><button class="circle-btn">FaceTime</button><button class="circle-btn">連絡先</button>
     </div>
     <button class="end-btn-red" onclick="location.reload()"></button>
   </center>
@@ -84,17 +87,24 @@
   var currentFocus = 0;
   var keys = ["1","2","3","4","5","6","7","8","9","*","0","#"];
 
+  // 初期フォーカス設定
+  window.onload = function() { updateFocus(); };
+
   function add(n) { 
     num += n; 
     document.getElementById('display').innerHTML = num; 
   }
 
-  // 【PC専用：ホイール操作】
-  function handleWheel(event) {
-    // 通話中でない時だけ動作
-    if(document.getElementById('callPage').style.display === 'block') return;
+  function cls() {
+    num = "";
+    document.getElementById('display').innerHTML = "&nbsp;";
+  }
 
-    // 前のフォーカスをクリア
+  // 【マウスホイール：数字の選択】
+  function handleWheel(event) {
+    if(document.getElementById('callPage').style.display === 'block') return;
+    
+    // 以前のフォーカスを解除
     document.getElementById('btn' + keys[currentFocus]).classList.remove('active-num');
 
     if (event.deltaY > 0) {
@@ -102,17 +112,24 @@
     } else {
       currentFocus = (currentFocus - 1 + keys.length) % keys.length;
     }
-
-    // 新しいフォーカスを強調（黄色くなる）
-    document.getElementById('btn' + keys[currentFocus]).classList.add('active-num');
+    updateFocus();
+    event.preventDefault(); // 画面スクロールを防止
   }
 
-  // エンターキーで選択中の数字を入力
-  document.addEventListener('keydown', function(e) {
-    if(e.key === "Enter") {
+  // 【ホイールクリック：数字の確定】
+  function handleMiddleClick(event) {
+    if(document.getElementById('callPage').style.display === 'block') return;
+    
+    // button == 1 がマウスの中ボタン（ホイールクリック）
+    if (event.button === 1) {
       add(keys[currentFocus]);
+      event.preventDefault();
     }
-  });
+  }
+
+  function updateFocus() {
+    document.getElementById('btn' + keys[currentFocus]).classList.add('active-num');
+  }
 
   function startCall() {
     if(num == "") return;
@@ -120,6 +137,8 @@
       document.getElementById('dialPage').style.display = 'none';
       document.getElementById('callPage').style.display = 'block';
       document.getElementById('target').innerHTML = num;
+      
+      // 5秒の静寂プロトコル
       setTimeout(function() {
         document.getElementById('timerText').innerHTML = "00:00";
         startTimer();
