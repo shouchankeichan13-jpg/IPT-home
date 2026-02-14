@@ -1,40 +1,60 @@
-// --- IPT V14.0 通信中継局スクリプト ---
-const GITHUB_TOKEN = "あなたの個人アクセストークン"; // GitHubで発行
-const REPO = "ユーザー名/リポジトリ名";
-const PATH = "voice.bin"; // 8bit音声ファイル名
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>IPT ツウシン モニター</title>
+</head>
+<body bgcolor="#FFFFFF" text="#000000">
 
-function doPost(e) {
-  // ESP32から届いた8bitバイナリ
-  const bytes = e.postData.contents;
-  const base64Data = Utilities.base64Encode(bytes);
+<center>
+  <br>
+  <h1>IPT モニタリング センター</h1>
+  <hr width="80%">
   
-  const url = `https://api.github.com/repos/${REPO}/contents/${PATH}`;
-  
-  // 1. 現在のファイルのSHAを取得（上書きに必須）
-  const getRes = UrlFetchApp.fetch(url, {
-    headers: { "Authorization": "token " + GITHUB_TOKEN },
-    muteHttpExceptions: true
-  });
-  
-  let sha = "";
-  if (getRes.getResponseCode() == 200) {
-    sha = JSON.parse(getRes.getContentText()).sha;
+  <p><b>ステータス：</b> <font color="#FF0000" id="status">テイシチュウ</font></p>
+
+  <table border="1" cellpadding="10">
+    <tr>
+      <td>
+        ココをクリックするとセツゾクします。<br>
+        セツゾクゴ、5ビョウカンのムオン（セイジャク）ガ アリマス。
+      </td>
+    </tr>
+  </table>
+
+  <br>
+
+  <form>
+    <input type="button" value="セツゾク カイシ" onclick="initIPT()" style="width:200px; height:50px;">
+  </form>
+
+  <br>
+  <hr width="80%">
+
+  <div id="log" align="left" style="width:80%; font-size: 12px;">
+    > システム ジュンビ カンリョウ<br>
+    > シレイ ヲ マッテイマス...
+  </div>
+
+</center>
+
+<script>
+  function initIPT() {
+    var status = document.getElementById('status');
+    var log = document.getElementById('log');
+
+    status.innerHTML = "セツゾクチュウ...";
+    log.innerHTML += "<br>> 5ビョウカンのバッファ ヲ セイセイチュウ...";
+
+    // 平成の静寂：5秒のタイムラグ演出
+    setTimeout(function() {
+      status.innerHTML = "ライブ ハイスンチュウ！！";
+      status.setAttribute("color", "#0000FF"); // 青色に変更
+      log.innerHTML += "<br>> GitHubト ドウキ シマシタ。オンセイ ヲ サイセイ シマス。";
+      
+      // ココにGitHubからvoice.binをフェッチして再生する生JSを記述
+    }, 5000);
   }
+</script>
 
-  // 2. GitHubへ射出
-  const payload = {
-    message: "IPT Voice Stream Update",
-    content: base64Data,
-    sha: sha
-  };
-
-  const options = {
-    method: "put",
-    headers: { "Authorization": "token " + GITHUB_TOKEN },
-    contentType: "application/json",
-    payload: JSON.stringify(payload)
-  };
-
-  UrlFetchApp.fetch(url, options);
-  return ContentService.createTextOutput("IPT_SUCCESS");
-}
+</body>
+</html>
