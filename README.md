@@ -2,29 +2,22 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IPT電話 V15.0</title>
+<title>IPT電話 V15.1</title>
 <style>
   body { margin: 0; font-family: sans-serif; background: #ffffff; overflow: hidden; touch-action: manipulation; }
   .heisei-table { border: 2px solid #000; background: #ccc; }
-  .dial-input { width: 75px; height: 55px; font-size: 22px; cursor: pointer; border: 2px solid #888; background: #eee; }
+  .dial-input { width: 75px; height: 55px; font-size: 22px; cursor: pointer; border: 2px solid #888; background: #eee; font-weight: bold; }
   .active-num { background: #ffff00 !important; border: 3px solid #ff0000 !important; transform: scale(1.05); outline: none; }
 
-  /* 通話中画面（iPhoneスタイル） */
   #callPage { 
     display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
     background: #000000; color: #ffffff; text-align: center; z-index: 100;
-    transition: opacity 0.3s; /* 耳を当てた時の消灯アニメーション */
+    transition: opacity 0.2s;
   }
   .iphone-name { font-size: 32px; margin-top: 80px; }
   .iphone-timer { font-size: 18px; margin-top: 10px; color: #d1d1d1; }
-  .circle-btn {
-    width: 75px; height: 75px; border-radius: 50%; background: rgba(255,255,255,0.15);
-    border: none; color: white; font-size: 12px; margin: 10px;
-  }
-  .end-btn-red {
-    width: 75px; height: 75px; border-radius: 50%; background: #FF3B30;
-    border: none; margin-top: 100px; cursor: pointer;
-  }
+  .circle-btn { width: 75px; height: 75px; border-radius: 50%; background: rgba(255,255,255,0.15); border: none; color: white; font-size: 12px; margin: 10px; }
+  .end-btn-red { width: 75px; height: 75px; border-radius: 50%; background: #FF3B30; border: none; margin-top: 100px; cursor: pointer; }
   .end-btn-red:after { content: "終了"; color: white; font-weight: bold; }
 </style>
 </head>
@@ -32,8 +25,8 @@
 
 <div id="dialPage">
   <center>
-    <br><font size="5"><b>IPT 電話 V15.0</b></font><br>
-    <font size="2" color="gray">PC：ホイール選択・中クリック / スマホ：耳当て感知対応</font><br><br>
+    <br><font size="5"><b>IPT 電話 V15.1</b></font><br>
+    <font size="2" color="gray">改良：キレのあるプッシュ音 / 耳当て感知対応</font><br><br>
     <table border="1" width="280" cellpadding="10" bgcolor="#F0F0F0">
       <tr><td align="right" height="60"><font size="6" id="display">&nbsp;</font></td></tr>
     </table>
@@ -78,7 +71,7 @@
 </div>
 
 <script>
-  // --- 音響エンジン：DTMF & 呼出音 ---
+  // --- 鋭いプッシュ音エンジン ---
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   const mainGain = audioCtx.createGain(); 
   mainGain.connect(audioCtx.destination);
@@ -89,13 +82,28 @@
   };
 
   function playDTMF(f1, f2) {
-    const osc1 = audioCtx.createOscillator(); const osc2 = audioCtx.createOscillator();
-    const g = audioCtx.createGain(); osc1.connect(g); osc2.connect(g); g.connect(mainGain);
-    osc1.frequency.value = f1; osc2.frequency.value = f2;
+    const osc1 = audioCtx.createOscillator();
+    const osc2 = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    
+    osc1.type = 'sine'; // 澄んだ高音
+    osc2.type = 'sine';
+    
+    osc1.frequency.value = f1; 
+    osc2.frequency.value = f2;
+    
+    osc1.connect(g); osc2.connect(g); g.connect(mainGain);
+    
     const now = audioCtx.currentTime;
-    g.gain.setValueAtTime(0, now); g.gain.linearRampToValueAtTime(0.1, now + 0.05);
-    g.gain.setValueAtTime(0.1, now + 0.45); g.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
-    osc1.start(now); osc2.start(now); osc1.stop(now + 0.7); osc2.stop(now + 0.7);
+    
+    // 針の刺さるような鋭いエンベロープ（アタック0.01秒）
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(0.2, now + 0.01); // 瞬時に立ち上がる
+    g.gain.setValueAtTime(0.2, now + 0.15);          // 短く保持
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.2); // スパッと切る
+    
+    osc1.start(now); osc2.start(now);
+    osc1.stop(now + 0.2); osc2.stop(now + 0.2);
   }
 
   function playRBT() {
@@ -103,44 +111,47 @@
     osc.frequency.value = 400; osc.connect(g); g.connect(mainGain);
     let now = audioCtx.currentTime;
     for(let i=0; i<2; i++) {
-      g.gain.setValueAtTime(0, now + i*3); g.gain.linearRampToValueAtTime(0.08, now + i*3 + 0.1);
-      g.gain.setValueAtTime(0.08, now + i*3 + 1.0); g.gain.linearRampToValueAtTime(0, now + i*3 + 1.1);
+      g.gain.setValueAtTime(0, now + i*3); g.gain.linearRampToValueAtTime(0.1, now + i*3 + 0.1);
+      g.gain.setValueAtTime(0.1, now + i*3 + 1.0); g.gain.linearRampToValueAtTime(0, now + i*3 + 1.1);
     }
     osc.start(now); osc.stop(now + 5);
   }
 
-  // --- 操作ロジック ---
+  // --- UI操作 ---
   var num = ""; var currentFocus = 0;
   var keys = ["1","2","3","4","5","6","7","8","9","*","0","#"];
   window.onload = function() { updateFocus(); };
 
   function add(n) { audioCtx.resume(); playDTMF(dtmfFreqs[n][0], dtmfFreqs[n][1]); num += n; document.getElementById('display').innerHTML = num; }
+  
   function handleWheel(e) {
     if(document.getElementById('callPage').style.display === 'block') return;
     document.getElementById('btn' + keys[currentFocus]).classList.remove('active-num');
     currentFocus = e.deltaY > 0 ? (currentFocus + 1) % keys.length : (currentFocus - 1 + keys.length) % keys.length;
     updateFocus(); e.preventDefault();
   }
-  function handleMiddleClick(e) { if(e.button === 1) { add(keys[currentFocus]); e.preventDefault(); } }
+  
+  function handleMiddleClick(e) { 
+    if(e.button === 1 && document.getElementById('callPage').style.display !== 'block') { 
+        add(keys[currentFocus]); e.preventDefault(); 
+    } 
+  }
+  
   function updateFocus() { document.getElementById('btn' + keys[currentFocus]).classList.add('active-num'); }
 
-  // --- 近接センサー実装 ---
+  // --- 近接センサー ---
   if ('ProximitySensor' in window) {
     try {
       const sensor = new ProximitySensor({ frequency: 10 });
       sensor.addEventListener('reading', () => {
-        if (document.getElementById('callPage').style.display === 'block') {
-          if (sensor.near) {
-            document.getElementById('callPage').style.opacity = "0";
-            mainGain.gain.setTargetAtTime(0.2, audioCtx.currentTime, 0.1); // 音量を下げる
-          } else {
-            document.getElementById('callPage').style.opacity = "1";
-            mainGain.gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.1); // 音量を戻す
-          }
+        const cp = document.getElementById('callPage');
+        if (cp.style.display === 'block') {
+          if (sensor.near) { cp.style.opacity = "0"; mainGain.gain.setTargetAtTime(0.1, audioCtx.currentTime, 0.05); }
+          else { cp.style.opacity = "1"; mainGain.gain.setTargetAtTime(1.0, audioCtx.currentTime, 0.05); }
         }
       });
       sensor.start();
-    } catch (err) { console.log("Sensor error"); }
+    } catch (err) {}
   }
 
   function startCall() {
@@ -154,7 +165,6 @@
       setTimeout(function() {
         document.getElementById('timerText').innerHTML = "00:00";
         startTimer();
-        // ★ここにGitHubフェッチ処理
       }, 5000);
     }
   }
