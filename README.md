@@ -1,153 +1,97 @@
-<html>
+<!DOCTYPE html>
+<html lang="ja">
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>IPT V16.3 COMPLETE</title>
-<style>
-  * { box-sizing: border-box; }
-  body { margin: 0; padding: 0; font-family: -apple-system, sans-serif; background: #ffffff; overflow: hidden; height: 100vh; width: 100vw; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>IPT SYSTEM - RECEIVER</title>
+    <style>
+        :root { --ios-red: #FF3B30; --ios-green: #4CD964; }
+        body { margin: 0; background: #000; color: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; height: 100vh; display: flex; align-items: center; justify-content: center; }
 
-  /* [1] ダイヤル画面：平成レトロ */
-  #dialPage { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%; }
-  .heisei-table { border: 2px solid #000; background: #ccc; border-collapse: collapse; }
-  .dial-input { width: 80px; height: 60px; font-size: 24px; cursor: pointer; border: 2px solid #888; background: #eee; font-weight: bold; }
-  .active-num { background: #ffff00 !important; border: 3px solid #ff0000 !important; transform: scale(1.05); }
+        /* 待機画面 */
+        #standby { text-align: center; transition: opacity 0.5s; }
+        .logo { font-size: 24px; letter-spacing: 5px; color: #555; margin-bottom: 10px; }
+        .spinner { width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto; }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* [2] 通話中画面：iPhoneスタイル */
-  #callPage { 
-    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-    background: #000000; color: #ffffff; z-index: 100; transition: opacity 0.2s;
-  }
-  .call-container { display: flex; flex-direction: column; align-items: center; padding-top: 100px; height: 100%; }
-  .iphone-name { font-size: 34px; font-weight: 300; margin-bottom: 8px; }
-  .iphone-timer { font-size: 18px; color: #d1d1d1; margin-bottom: 60px; }
-  
-  .icon-grid { display: flex; justify-content: space-around; width: 300px; margin-bottom: 60px; }
-  .icon-box { display: flex; flex-direction: column; align-items: center; width: 80px; }
-  .circle-btn { width: 72px; height: 72px; border-radius: 50%; background: rgba(255,255,255,0.15); border: none; color: white; margin-bottom: 10px; font-size: 12px; cursor: pointer; transition: 0.2s; }
-  .icon-label { font-size: 12px; color: white; }
-
-  .end-btn-red { 
-    width: 78px; height: 78px; border-radius: 50%; background: #FF3B30; border: none; 
-    margin-top: auto; margin-bottom: 80px; cursor: pointer; color: white; font-weight: bold; font-size: 16px;
-  }
-</style>
+        /* 着信画面 (iPhone風) */
+        #callUI { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(180deg, #2c3e50 0%, #000000 100%); flex-direction: column; align-items: center; justify-content: space-between; padding: 80px 0; box-sizing: border-box; }
+        .caller-name { font-size: 32px; font-weight: 300; }
+        .call-status { font-size: 18px; color: #aaa; margin-top: 10px; }
+        .button-container { display: flex; gap: 60px; margin-bottom: 40px; }
+        .btn { width: 75px; height: 75px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; font-weight: bold; }
+        .decline { background: var(--ios-red); }
+        .accept { background: var(--ios-green); animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(76, 217, 100, 0.4); } 70% { box-shadow: 0 0 0 20px rgba(76, 217, 100, 0); } 100% { box-shadow: 0 0 0 0 rgba(76, 217, 100, 0); } }
+    </style>
 </head>
-<body onwheel="handleWheel(event)" onmousedown="handleMiddleClick(event)">
+<body>
 
-<div id="dialPage">
-  <font size="5"><b>IPT V16.3</b></font><br>
-  <table border="1" width="260" cellpadding="10" bgcolor="#F0F0F0" style="margin-bottom:20px;">
-    <tr><td align="right" height="60"><font size="6" id="display">&nbsp;</font></td></tr>
-  </table>
-  <table class="heisei-table" border="1">
-    <tr><td><input type="button" value="1" id="btn1" class="dial-input" onclick="add('1')"></td><td><input type="button" value="2" id="btn2" class="dial-input" onclick="add('2')"></td><td><input type="button" value="3" id="btn3" class="dial-input" onclick="add('3')"></td></tr>
-    <tr><td><input type="button" value="4" id="btn4" class="dial-input" onclick="add('4')"></td><td><input type="button" value="5" id="btn5" class="dial-input" onclick="add('5')"></td><td><input type="button" value="6" id="btn6" class="dial-input" onclick="add('6')"></td></tr>
-    <tr><td><input type="button" value="7" id="btn7" class="dial-input" onclick="add('7')"></td><td><input type="button" value="8" id="btn8" class="dial-input" onclick="add('8')"></td><td><input type="button" value="9" id="btn9" class="dial-input" onclick="add('9')"></td></tr>
-    <tr><td><input type="button" value="*" id="btn*" class="dial-input" onclick="add('*')"></td><td><input type="button" value="0" id="btn0" class="dial-input" onclick="add('0')"></td><td><input type="button" value="#" id="btn#" class="dial-input" onclick="add('#')"></td></tr>
-  </table>
-  <br>
-  <input type="button" value="電話をかける" onclick="startCall()" style="width:250px; height:60px; font-size:20px; cursor:pointer; background:#ccffcc; font-weight:bold; border:2px solid #000;">
-</div>
-
-<div id="callPage">
-  <div class="call-container">
-    <div class="iphone-name" id="target">発信中...</div>
-    <div class="iphone-timer" id="timerText">接続中...</div>
-    
-    <div class="icon-grid">
-      <div class="icon-box"><button id="muteBtn" class="circle-btn" onclick="toggleMute()">消音</button><span class="icon-label">消音</span></div>
-      <div class="icon-box"><button id="keyBtn" class="circle-btn" onclick="alert('通話中ダイヤル有効')">キーパッド</button><span class="icon-label">キーパッド</span></div>
-      <div class="icon-box"><button id="spBtn" class="circle-btn" onclick="toggleSpeaker()">スピーカー</button><span class="icon-label">スピーカー</span></div>
+    <div id="standby">
+        <div class="logo">IPT SYSTEM</div>
+        <div id="waitMsg" style="margin-bottom: 20px; color: #888;">小番号を入力してください...</div>
+        <input type="text" id="myNumber" placeholder="自分の番号(4桁)" maxlength="4" style="background: #222; border: 1px solid #444; color: #fff; text-align: center; padding: 10px; border-radius: 5px; font-size: 20px; width: 150px;">
+        <button onclick="startMonitoring()" style="margin-top: 20px; display: block; width: 100%; background: none; border: 1px solid #555; color: #555; padding: 5px; cursor: pointer;">待機開始</button>
+        <div class="spinner" id="monIcon" style="display:none; margin-top: 20px;"></div>
     </div>
 
-    <button class="end-btn-red" onclick="location.reload()">終了</button>
-  </div>
-</div>
+    <div id="callUI">
+        <div style="text-align: center;">
+            <div class="caller-name">総帥 (帝国直通)</div>
+            <div class="call-status" id="statText">IPT通信 着信中...</div>
+        </div>
+        
+        <div class="button-container">
+            <div style="text-align:center;"><button class="btn decline" onclick="location.reload()">拒否</button><div style="margin-top:10px; font-size:12px;">拒否</div></div>
+            <div style="text-align:center;"><button class="btn accept" id="acceptBtn" onclick="connected()">応答</button><div style="margin-top:10px; font-size:12px;">応答</div></div>
+        </div>
+    </div>
 
-<script>
-  // --- 音響設定 ---
-  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  const mainGain = audioCtx.createGain(); mainGain.connect(audioCtx.destination);
-  const dtmf={'1':[697,1209],'2':[697,1336],'3':[697,1477],'4':[770,1209],'5':[770,1336],'6':[770,1477],'7':[852,1209],'8':[852,1336],'9':[852,1477],'*':[941,1209],'0':[941,1336],'#':[941,1477]};
+    <script>
+        let myNum = "";
+        let lastETag = "";
 
-  function playDTMF(f1,f2){
-    const o1=audioCtx.createOscillator(); const o2=audioCtx.createOscillator(); const g=audioCtx.createGain();
-    o1.frequency.value=f1; o2.frequency.value=f2; o1.connect(g); o2.connect(g); g.connect(mainGain);
-    const n=audioCtx.currentTime; g.gain.setValueAtTime(0,n); g.gain.linearRampToValueAtTime(0.2,n+0.01);
-    g.gain.setValueAtTime(0.2,n+0.15); g.gain.exponentialRampToValueAtTime(0.001,n+0.2);
-    o1.start(n); o2.start(n); o1.stop(n+0.2); o2.stop(n+0.2);
-  }
+        function startMonitoring() {
+            myNum = document.getElementById('myNumber').value;
+            if (myNum.length !== 4) { alert("4桁の小番号を入力してください"); return; }
+            
+            document.getElementById('waitMsg').innerText = myNum + "番で待機中...";
+            document.getElementById('myNumber').style.display = "none";
+            document.querySelector('button').style.display = "none";
+            document.getElementById('monIcon').style.display = "block";
 
-  function playRBT(){
-    const c=audioCtx.createOscillator(); const m=audioCtx.createOscillator(); const mg=audioCtx.createGain(); const g=audioCtx.createGain();
-    c.frequency.value=400; m.frequency.value=16; mg.gain.value=15;
-    m.connect(mg); mg.connect(c.frequency); c.connect(g); g.connect(mainGain);
-    let n=audioCtx.currentTime;
-    for(let i=0; i<2; i++){
-      let s=n+(i*3); g.gain.setValueAtTime(0,s); g.gain.linearRampToValueAtTime(0.12,s+0.05);
-      g.gain.setValueAtTime(0.12,s+1.0); g.gain.linearRampToValueAtTime(0,s+1.05);
-    }
-    c.start(n); m.start(n); c.stop(n+5); m.stop(n+5);
-  }
-
-  // --- 操作ロジック ---
-  var num=""; var cur=0; var keys=["1","2","3","4","5","6","7","8","9","*","0","#"];
-  window.onload=()=>updateFocus();
-  function add(n){ audioCtx.resume(); playDTMF(dtmf[n][0],dtmf[n][1]); num+=n; document.getElementById('display').innerHTML=num; }
-  function handleWheel(e){
-    if(document.getElementById('callPage').style.display==='block') return;
-    document.getElementById('btn'+keys[cur]).classList.remove('active-num');
-    cur=e.deltaY>0?(cur+1)%keys.length:(cur-1+keys.length)%keys.length;
-    updateFocus(); e.preventDefault();
-  }
-  function handleMiddleClick(e){ if(e.button===1 && document.getElementById('dialPage').style.display!=='none'){ add(keys[cur]); e.preventDefault(); } }
-  function updateFocus(){ document.getElementById('btn'+keys[cur]).classList.add('active-num'); }
-
-  // --- 通話画面ボタン機能 ---
-  let isMuted=false; let isSp=false;
-  function toggleMute(){
-    isMuted=!isMuted; const b=document.getElementById('muteBtn');
-    b.style.background=isMuted?"white":"rgba(255,255,255,0.15)"; b.style.color=isMuted?"black":"white";
-  }
-  function toggleSpeaker(){
-    isSp=!isSp; const b=document.getElementById('spBtn');
-    b.style.background=isSp?"white":"rgba(255,255,255,0.15)"; b.style.color=isSp?"black":"white";
-    mainGain.gain.setTargetAtTime(isSp?2.0:1.0, audioCtx.currentTime, 0.1);
-  }
-
-  // --- 発信・センサー ---
-  if('ProximitySensor' in window){
-    try {
-      const s=new ProximitySensor({frequency:10});
-      s.addEventListener('reading',()=>{
-        const cp=document.getElementById('callPage');
-        if(cp.style.display==='block'){
-          if(s.near){ cp.style.opacity="0"; mainGain.gain.setTargetAtTime(0.1,audioCtx.currentTime,0.05); }
-          else{ cp.style.opacity="1"; mainGain.gain.setTargetAtTime(isSp?2.0:1.0,audioCtx.currentTime,0.05); }
+            // 監視ループ開始
+            setInterval(checkUpdate, 3000);
         }
-      });
-      s.start();
-    }catch(e){}
-  }
 
-  function startCall(){
-    if(num=="")return;
-    if(window.confirm(num+" へ発信しますか？")){
-      audioCtx.resume();
-      document.getElementById('dialPage').style.display='none';
-      document.getElementById('callPage').style.display='block';
-      document.getElementById('target').innerHTML=num;
-      playRBT();
-      setTimeout(()=>{ document.getElementById('timerText').innerHTML="00:00"; startTimer(); }, 5000);
-    }
-  }
+        async function checkUpdate() {
+            // 総帥のリポジトリの、自分の小番号.binを監視
+            const url = `https://raw.githubusercontent.com/shouchankeichan13-jpg/IPT/main/${myNum}.bin`;
+            
+            try {
+                const res = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+                if (res.ok) {
+                    const etag = res.headers.get('ETag');
+                    if (lastETag && lastETag !== etag) {
+                        triggerCall();
+                    }
+                    lastETag = etag;
+                }
+            } catch (e) { console.log("待機中..."); }
+        }
 
-  function startTimer(){
-    let s=0; setInterval(()=>{ s++; let m=Math.floor(s/60); let sc=s%60;
-      document.getElementById('timerText').innerHTML=(m<10?'0'+m:m)+":"+(sc<10?'0'+sc:sc);
-    },1000);
-  }
-</script>
+        function triggerCall() {
+            document.getElementById('standby').style.display = 'none';
+            document.getElementById('callUI').style.display = 'flex';
+            // 着信音の代わりにバイブレーション（モバイルのみ）
+            if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200]);
+        }
+
+        function connected() {
+            document.getElementById('statText').innerText = "00:01";
+            document.getElementById('statText').style.color = "#4CD964";
+            document.getElementById('acceptBtn').style.display = "none";
+        }
+    </script>
 </body>
 </html>
